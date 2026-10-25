@@ -10,9 +10,19 @@ jobs:
     steps:
       - name: Ping sentinel sweep
         run: |
-          code=$(curl -s -o /tmp/out.json -w "%{http_code}" --max-time 110 "$SWEEP_URL")
-          echo "HTTP $code"
+          echo "SWEEP_URL length: ${#SWEEP_URL}"
+          if [ -z "$SWEEP_URL" ]; then echo "SWEEP_URL secret is EMPTY"; exit 1; fi
+          for i in 1 2 3; do
+            code=$(curl -s -o /tmp/out.json -w "%{http_code}" --max-time 150 "$SWEEP_URL")
+            echo "attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then
+              cat /tmp/out.json || true
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "final attempt output:"
           cat /tmp/out.json || true
-          test "$code" = "200"
+          exit 1
         env:
           SWEEP_URL: ${{ secrets.SWEEP_URL }}
